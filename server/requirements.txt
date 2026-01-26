@@ -1,0 +1,14 @@
+fastapi
+uvicorn
+celery
+redis
+pydantic
+python-multipart
+aiofiles
+requests
+python-dotenv
+fuzzywuzzy
+python-Levenshtein
+openai-whisper
+torch
+setuptools-rust
