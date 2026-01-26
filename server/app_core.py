@@ -14,6 +14,7 @@ import aiofiles
 import requests
 from fuzzywuzzy import fuzz
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Query, BackgroundTasks
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -320,4 +321,5 @@ if __name__ == "__main__":
     import uvicorn
     # Use the PORT environment variable if it exists (for Render/Cloud)
     port = int(os.environ.get("PORT", 8000))
-    uvicorn.run("app_core:app", host="0.0.0.0", port=port)
+    # Pass the app object directly when running via python server/app_core.py
+    uvicorn.run(app, host="0.0.0.0", port=port)
