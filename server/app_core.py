@@ -266,10 +266,19 @@ app.mount("/", StaticFiles(directory=str(BASE_DIR.parent / "public"), html=True)
 @app.post("/upload")
 async def upload_file(file: UploadFile = File(...)):
     file_id = uuid.uuid4().hex
-    dest = UPLOADS_DIR / f"{file_id}_{file.filename}"
-    async with aiofiles.open(dest, "wb") as f:
-        content = await file.read()
-        await f.write(content)
+    # Sanitize filename
+    clean_name = "".join(c for c in file.filename if c.isalnum() or c in "._- ")
+    dest = UPLOADS_DIR / f"{file_id}_{clean_name}"
+    
+    # Streaming rewrite to save RAM (Very important for Render Free Tier)
+    try:
+        async with aiofiles.open(dest, "wb") as f:
+            while chunk := await file.read(1024 * 1024): # 1MB chunks
+                await f.write(chunk)
+    except Exception as e:
+        if os.path.exists(dest): os.remove(dest)
+        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
+        
     return {"path": str(dest), "file_id": file_id}
 
 @app.post("/mix")
