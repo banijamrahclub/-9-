@@ -19,6 +19,8 @@
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
     <!-- Babel for JSX -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- AI Background Removal -->
+    <script src="https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.4.5/dist/bundle.js"></script>
     <!-- LameJS for MP3 Encoding -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js"></script>
 
@@ -27,8 +29,30 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
-    <!-- Neural Engine for SRT (Whisper) -->
-    <script src="https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.1"></script>
+    <!-- PSD Engine (ag-psd) -->
+    <script src="https://unpkg.com/ag-psd@2.1.25/dist/bundle.js"></script>
+    <script>
+        // Critical Fix for agPsd loading variations
+        (function () {
+            function initialize() {
+                // Version 1: Global agPsd
+                if (window.agPsd && window.agPsd.readPsd) return;
+
+                // Version 2: Default export
+                if (window.agPsd && window.agPsd.default && window.agPsd.default.readPsd) {
+                    const def = window.agPsd.default;
+                    for (let key in def) window.agPsd[key] = def[key];
+                    console.log("agPsd reconciled from .default");
+                }
+
+                // Version 3: Alternative Global name
+                if (!window.agPsd && window.AgPsd) window.agPsd = window.AgPsd;
+            }
+            initialize();
+            window.addEventListener('load', initialize);
+            setTimeout(initialize, 1000); // Fail-safe after 1 sec
+        })();
+    </script>
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap');
@@ -61,6 +85,11 @@
             box-sizing: border-box;
             padding: 0;
             margin: 0;
+        }
+
+        ::selection {
+            background: var(--primary);
+            color: white;
         }
 
         body {
@@ -247,139 +276,33 @@
             }
         }
 
-        @keyframes pulse {
-            0% {
-                transform: scale(1);
-                opacity: 0.8;
-            }
-
-            50% {
-                transform: scale(1.1);
-                opacity: 1;
-                filter: drop-shadow(0 0 15px var(--primary));
-            }
-
-            100% {
-                transform: scale(1);
-                opacity: 0.8;
-            }
-        }
-
         .animate-fade-in {
             animation: fadeIn 0.6s ease-out forwards;
         }
 
-        .animate-pulse {
-            animation: pulse 2s infinite;
-        }
-
-        .blur-switching {
-            filter: blur(15px);
-            opacity: 0.7;
-            pointer-events: none;
-        }
-
-        .blur-container {
-            transition: filter 0.4s ease, opacity 0.4s ease;
-        }
-
-        /* Language Switch Transition Animation */
-        .lang-switch-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: var(--background);
-            z-index: 10000;
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-
-        .lang-switch-overlay.active {
-            opacity: 1;
-            pointer-events: all;
-        }
-
-        .lang-curtain {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(135deg, var(--primary) 0%, #000 100%);
-            transform: translateX(100%);
-            transition: transform 0.4s cubic-bezier(0.7, 0, 0.3, 1);
-        }
-
-        .lang-switch-overlay.active .lang-curtain {
-            transform: translateX(0);
-        }
-
         @keyframes pulse {
             0% {
                 transform: scale(1);
-                opacity: 0.8;
+                filter: drop-shadow(0 0 5px rgba(0, 74, 173, 0.4));
             }
 
             50% {
                 transform: scale(1.05);
-                opacity: 1;
+                filter: drop-shadow(0 0 25px rgba(0, 74, 173, 0.8));
             }
 
             100% {
                 transform: scale(1);
-                opacity: 0.8;
+                filter: drop-shadow(0 0 5px rgba(0, 74, 173, 0.4));
             }
         }
 
-        @keyframes spin-hourglass {
-            0% {
-                transform: rotate(0deg);
-            }
-
-            50% {
-                transform: rotate(180deg);
-            }
-
-            100% {
-                transform: rotate(180deg);
-            }
-        }
-
-        .animate-spin-hourglass {
+        .animate-pulse {
+            animation: pulse 2s infinite ease-in-out;
             display: inline-block;
-            animation: spin-hourglass 1.5s infinite ease-in-out;
         }
 
-        @keyframes spin {
-            from {
-                transform: rotate(0deg);
-            }
-
-            to {
-                transform: rotate(360deg);
-            }
-        }
-
-        .animate-spin {
-            display: inline-block;
-            animation: spin 1s linear infinite;
-        }
-
-        input[type="file"]::file-selector-button {
-            background: var(--surface-hover);
-            color: var(--text-secondary);
-            border: 1px solid var(--border);
-            padding: 8px 16px;
-            border-radius: 6px;
-            cursor: pointer;
-            margin-left: 10px;
-            font-family: var(--font-main);
-        }
-
-        /* --- MOBILE RESPONSIVENESS --- */
+        /* Mobile Adjustments */
         @media (max-width: 768px) {
             h1 {
                 font-size: 2.2rem;
@@ -387,19 +310,6 @@
 
             h2 {
                 font-size: 1.6rem;
-            }
-
-            .nav-link {
-                display: none;
-            }
-
-            /* Hide text links in mobile nav to save space */
-            .hero {
-                padding-top: 40px;
-            }
-
-            .nav-content {
-                padding: 0 10px;
             }
 
             .container {
@@ -419,34 +329,6 @@
             .btn {
                 width: 100%;
             }
-        }
-
-        .processing-card {
-            background: rgba(0, 74, 173, 0.05);
-            border: 1px solid var(--primary);
-            padding: 40px;
-            border-radius: 20px;
-            text-align: center;
-        }
-
-        @keyframes sweep {
-            0% {
-                transform: translateX(-100%);
-            }
-
-            100% {
-                transform: translateX(100%);
-            }
-        }
-
-        .progress-sweep {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-            animation: sweep 1.5s infinite;
         }
     </style>
 </head>
@@ -598,6 +480,8 @@
                 nav_logout: "تسجيل خروج",
                 hero_title: "استوديو الذكاء الاصطناعي",
                 hero_desc: "مكساج صوتي احترافي • إنشاء صور بالذكاء الاصطناعي • إنتاج محتوى احترافي\nكل ما تحتاجه لإنتاج محتوى احترافي في مكان واحد",
+                tools_ads: "مولد الإعلانات",
+                tools_ads_desc: "أنشئ إعلانات المواليد والوفيات والعزاء باحترافية وسرعة فائقة.",
                 hero_btn_reg: "إنشاء حساب",
                 hero_btn_login: "تسجيل دخول",
                 hero_btn_pricing: "الباقات",
@@ -668,7 +552,32 @@
                 tools_montage_desc: "حوّل ملفاتك الصوتية إلى فيديو احترافي مع تحريك الكلمات آلياً وتأثيرات سينمائية.",
                 tools_srt: "📜 ترجمة SRT",
                 tools_srt_desc: "ترجمة القصائد واللطميات تلقائياً واستخراج ملفات ترجمة احترافية SRT متزامنة.",
-                tools_featured: "أداة مميزة"
+                tools_featured: "أداة مميزة",
+                tools_mix: "مكساج وعزل الصوت",
+                tools_mix_desc: "نظام احترافي لمكساج القصائد مع العزاء أو اللطمية باستخدام محاكاة وتأثيرات Adobe Audition.",
+                mix_smart_title: "مركز المكساج الذكي",
+                mix_internal_title: "مكساج مع عزاء (داخلي)",
+                mix_internal_desc: "دمج الرادود مع صوت المعزين داخل المأتم مع تأثيرات الصدى الطبيعية.",
+                mix_external_title: "مكساج مع لطمية (ستوديو)",
+                mix_external_desc: "دمج الرادود مع تراك لطمية خارجي أو إيقاعات ستوديو احترافية.",
+                mix_upload_title: "رفع الملفات الصوتية",
+                mix_track_reciter: "صوت الرادود (Dry)",
+                mix_track_mourners_list: "أصوات المعزين (الجمهور)",
+                mix_track_latma_list: "تراكات اللطمية",
+                mix_btn_add: "أضف تراك إضافي",
+                mix_btn_start_now: "ابدأ المكساج السحابي",
+                mix_settings_title: "إعدادات الهندسة الصوتية",
+                mix_project_type: "نوع المشروع:",
+                mix_change_type: "تغيير النوع",
+                mix_applied_filters: "الفلاتر المطبقة آلياً:",
+                mix_filter_reverb: "Reverb (Hussaini Hall)",
+                mix_filter_echo: "Multi-Tap Delay",
+                mix_filter_limiter: "Hard Limiter (-0.1dB)",
+                mix_filter_stereo: "Stereo Imaging",
+                mix_cost: "تكلفة العملية",
+                mix_success_msg: "تم المكساج بنجاح!",
+                mix_ready_msg: "ملفاتك جاهزة للتحميل بالدقة الكاملة.",
+                mix_btn_new: "مكساج جديد"
             },
             en: {
                 nav_home: "Home",
@@ -736,6 +645,38 @@
                 mobile_block_img_msg: "Desktop required for Image Studio.",
                 welcome_back: "Welcome back,",
                 dashboard_desc: "Ready to use AI tools today? Start now from our console.",
+                tools_mix: "Audio Mixing & Isolation",
+                tools_mix_desc: "Professional system for mixing poems with mourners or latmiya using Adobe Audition effects simulation.",
+                tools_ads: "Ad Generator",
+                tools_ads_desc: "Create professional posters for events, births, and mourning with AI.",
+                tools_montage: "Poem Montage",
+                tools_montage_desc: "Turn your audio into professional video with auto lyrics and cinematic effects.",
+                tools_srt: "SRT Sync",
+                tools_srt_desc: "Auto sync poetry text with audio to generate professional SRT files.",
+                tools_featured: "Featured Tool",
+                mix_smart_title: "Smart Mixing Center",
+                mix_internal_title: "Internal Mix (Mourners)",
+                mix_internal_desc: "Merge reciter with audience voices inside the hall with natural reverb.",
+                mix_external_title: "External Mix (Studio)",
+                mix_external_desc: "Merge reciter with external latmiya tracks or professional studio beats.",
+                mix_upload_title: "Upload Audio Files",
+                mix_track_reciter: "Reciter Vocal (Dry)",
+                mix_track_mourners_list: "Mourner Tracks (Audience)",
+                mix_track_latma_list: "Latmiya Tracks",
+                mix_btn_add: "Add Extra Track",
+                mix_btn_start_now: "Start Cloud Mix",
+                mix_settings_title: "Audio Engineering Settings",
+                mix_project_type: "Project Type:",
+                mix_change_type: "Change Type",
+                mix_applied_filters: "Auto Applied Filters:",
+                mix_filter_reverb: "Reverb (Hussaini Hall)",
+                mix_filter_echo: "Multi-Tap Delay",
+                mix_filter_limiter: "Hard Limiter (-0.1dB)",
+                mix_filter_stereo: "Stereo Imaging",
+                mix_cost: "Process Cost",
+                mix_success_msg: "Mixed Successfully!",
+                mix_ready_msg: "Your files are ready for high-quality download.",
+                mix_btn_new: "New Mix",
                 dashboard_go: "Go to Console",
                 pricing_offers: "Pricing & Packs",
                 btn_download_wav: "WAV Version",
@@ -1160,7 +1101,6 @@
                     </section>
                 </div>
             );
-
         }
 
         function LoginPage() {
@@ -1283,152 +1223,61 @@
                     <h2 style={{ marginBottom: '30px', textAlign: 'center' }}>{t('nav_tools')}</h2>
 
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '30px', marginBottom: '40px' }}>
-                        {/* Featured Montage Tool */}
-                        <div
-                            className="card"
-                            style={{
-                                padding: '40px 30px',
-                                textAlign: 'center',
-                                cursor: 'pointer',
-                                transition: 'all 0.3s ease',
-                                border: '2px solid var(--primary)',
-                                position: 'relative',
-                                overflow: 'hidden',
-                                background: 'linear-gradient(135deg, rgba(212, 175, 55, 0.05) 0%, rgba(0, 0, 0, 0) 100%)'
-                            }}
-                            onClick={() => push('/montage')}
-                            onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-5px)')}
-                            onMouseLeave={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
-                        >
-                            <div className="badge" style={{
-                                position: 'absolute',
-                                top: '20px',
-                                left: '20px',
-                                background: 'var(--primary)',
-                                color: '#000',
-                                fontWeight: 'bold',
-                                zIndex: 10
-                            }}>{t('tools_featured')}</div>
-
-                            <div style={{
-                                width: '100%',
-                                height: '150px',
-                                overflow: 'hidden',
-                                borderRadius: '15px',
-                                marginBottom: '20px',
-                                border: '1px solid var(--border)'
-                            }}>
-                                <img src="https://blog.mostaql.com/wp-content/uploads/2015/05/%D8%AF%D9%84%D9%8A%D9%84%D9%83-%D8%A7%D9%84%D8%B4%D8%A7%D9%85%D9%84-%D9%84%D8%AF%D8%AE%D9%88%D9%84-%D8%B9%D8%A7%D9%84%D9%85-%D8%AA%D8%AD%D8%B1%D9%8A%D8%B1-%D8%A7%D9%84%D9%81%D9%8A%D8%AF%D9%8A%D9%88.png" alt="Video Montage" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        {/* Audio Mix Card */}
+                        <div className="card" onClick={() => push('/mix')} style={{ textAlign: 'center', padding: '30px', border: '2px solid var(--primary)', transition: '0.3s' }} onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-5px)'} onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}>
+                            <div style={{ width: '100%', height: '160px', overflow: 'hidden', borderRadius: '15px', marginBottom: '20px', border: '1px solid var(--border)' }}>
+                                <img src="https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?q=80&w=2070&auto=format&fit=crop" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                             </div>
-
-                            <h3 style={{ fontSize: '1.5rem', marginBottom: '15px', color: 'var(--primary)' }}>{t('tools_montage')}</h3>
-                            <p style={{ color: 'var(--text-secondary)', marginBottom: '20px', lineHeight: '1.6' }}>{t('tools_montage_desc')}</p>
-
-                            <div style={{
-                                padding: '8px 20px',
-                                background: 'rgba(212, 175, 55, 0.1)',
-                                borderRadius: '20px',
-                                color: 'var(--primary)',
-                                fontWeight: 'bold',
-                                marginBottom: '20px',
-                                display: 'inline-block'
-                            }}>
-                                8 {t('credits')}
-                            </div>
-
-                            <button className="btn btn-primary" style={{ width: '100%' }} onClick={() => push('/montage')}>{t('btn_start')}</button>
-                        </div>
-
-
-                        {/* SRT Tool */}
-                        <div
-                            className="card"
-                            style={{
-                                padding: '40px 30px',
-                                textAlign: 'center',
-                                cursor: 'pointer',
-                                transition: 'all 0.3s ease',
-                                border: '2px solid rgba(0, 74, 173, 0.2)',
-                                position: 'relative',
-                                overflow: 'hidden'
-                            }}
-                            onClick={() => push('/srt')}
-                            onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-5px)')}
-                            onMouseLeave={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
-                        >
-                            <div style={{
-                                width: '100%',
-                                height: '150px',
-                                overflow: 'hidden',
-                                borderRadius: '15px',
-                                marginBottom: '20px',
-                                border: '1px solid var(--border)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center'
-                            }}>
-                                <img src="https://www.audome.io/audome-uploads/poetry-tool.png" alt="SRT Tool" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                            </div>
-                            <h3 style={{ fontSize: '1.5rem', marginBottom: '15px', color: 'var(--primary)' }}>{t('tools_srt')}</h3>
-                            <p style={{ color: 'var(--text-secondary)', marginBottom: '20px', lineHeight: '1.6' }}>{t('tools_srt_desc')}</p>
-
-                            <div style={{
-                                padding: '8px 20px',
-                                background: 'rgba(0, 74, 173, 0.1)',
-                                borderRadius: '20px',
-                                color: 'var(--primary)',
-                                fontWeight: 'bold',
-                                marginBottom: '20px',
-                                display: 'inline-block'
-                            }}>
-                                3 {t('credits')}
-                            </div>
-
-                            <button className="btn btn-primary" style={{ width: '100%' }} onClick={() => push('/srt')}>{t('btn_start')}</button>
-                        </div>
-
-                        {/* Image Gen Tool */}
-                        <div
-                            className="card"
-                            style={{
-                                padding: '40px 30px',
-                                textAlign: 'center',
-                                cursor: 'pointer',
-                                transition: 'all 0.3s ease',
-                                border: '2px solid rgba(0, 74, 173, 0.2)',
-                                position: 'relative',
-                                overflow: 'hidden'
-                            }}
-                            onClick={() => push('/image-gen')}
-                            onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-5px)')}
-                            onMouseLeave={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
-                        >
-                            <div style={{
-                                width: '100%',
-                                height: '150px',
-                                overflow: 'hidden',
-                                borderRadius: '15px',
-                                marginBottom: '20px',
-                                border: '1px solid var(--border)'
-                            }}>
-                                <img src="https://raw.githubusercontent.com/banijamrahclub/hlb./db2b446391b0fb1da6f775be88a07b8308d6177d/%D8%B5%D9%88%D8%B1%20%D8%A8%D8%A7%D9%84%D8%B0%D9%83%D8%A7%D8%A1%20%D8%A7%D9%84%D8%A7%D8%B5%D8%B7%D9%86%D8%A7%D8%B9%D9%8A" alt="AI Studio" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                            </div>
-                            <h3 style={{ fontSize: '1.5rem', marginBottom: '15px', color: 'var(--primary)' }}>{t('gen_title')}</h3>
-                            <p style={{ color: 'var(--text-secondary)', marginBottom: '20px', lineHeight: '1.6' }}>{t('tools_img_desc')}</p>
-
-                            <div style={{
-                                padding: '8px 20px',
-                                background: 'rgba(0, 74, 173, 0.1)',
-                                borderRadius: '20px',
-                                color: 'var(--primary)',
-                                fontWeight: 'bold',
-                                marginBottom: '20px',
-                                display: 'inline-block'
-                            }}>
-                                3 - 4 {t('credits')}
-                            </div>
-
+                            <div className="badge" style={{ marginBottom: '15px', background: 'var(--primary)', color: 'white' }}>الأساسية ⭐</div>
+                            <h3 style={{ marginBottom: '15px', color: 'var(--primary)' }}>{t('tools_mix')}</h3>
+                            <p style={{ marginBottom: '20px', color: 'var(--text-secondary)' }}>{t('tools_mix_desc')}</p>
+                            <div style={{ marginBottom: '20px', fontWeight: 'bold', color: 'var(--primary)' }}>4 {t('credits')}</div>
                             <button className="btn btn-primary" style={{ width: '100%' }}>{t('btn_start')}</button>
+                        </div>
+                        {/* Montage Card */}
+                        <div className="card" onClick={() => push('/montage')} style={{ textAlign: 'center', padding: '30px', transition: '0.3s' }} onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-5px)'} onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}>
+                            <div style={{ width: '100%', height: '160px', overflow: 'hidden', borderRadius: '15px', marginBottom: '20px', border: '1px solid var(--border)' }}>
+                                <img src="https://blog.mostaql.com/wp-content/uploads/2015/05/%D8%AF%D9%84%D9%8A%D9%84%D9%83-%D8%A7%D9%84%D8%B4%D8%A7%D9%85%D9%84-%D9%84%D8%AF%D8%AE%D9%88%D9%84-%D8%B9%D8%A7%D9%84%D9%85-%D8%AA%D8%AD%D8%B1%D9%8A%D8%B1-%D8%A7%D9%84%D9%81%D9%8A%D8%AF%D9%8A%D9%88.png" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            </div>
+                            <div className="badge" style={{ marginBottom: '15px' }}>{t('tools_featured')}</div>
+                            <h3 style={{ marginBottom: '15px', color: 'var(--primary)' }}>{t('tools_montage')}</h3>
+                            <p style={{ marginBottom: '20px', color: 'var(--text-secondary)' }}>{t('tools_montage_desc')}</p>
+                            <div style={{ marginBottom: '20px', fontWeight: 'bold', color: 'var(--primary)' }}>8 {t('credits')}</div>
+                            <button className="btn btn-primary" style={{ width: '100%' }}>{t('btn_start')}</button>
+                        </div>
+
+                        {/* Ads Gen Card */}
+                        <div className="card" onClick={() => push('/ads')} style={{ textAlign: 'center', padding: '30px', border: '2px solid var(--primary)', transition: '0.3s' }} onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-5px)'} onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}>
+                            <div style={{ width: '100%', height: '160px', overflow: 'hidden', borderRadius: '15px', marginBottom: '20px', border: '1px solid var(--border)' }}>
+                                <img src="https://images.unsplash.com/photo-1542744173-8e7e53415bb0?q=80&w=2000&auto=format&fit=crop" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            </div>
+                            <div className="badge" style={{ marginBottom: '15px', background: 'var(--primary)', color: 'white' }}>جديد ✨</div>
+                            <h3 style={{ marginBottom: '15px', color: 'var(--primary)' }}>{t('tools_ads')}</h3>
+                            <p style={{ marginBottom: '20px', color: 'var(--text-secondary)' }}>{t('tools_ads_desc')}</p>
+                            <div style={{ marginBottom: '20px', fontWeight: 'bold', color: 'var(--primary)' }}>4 {t('credits')}</div>
+                            <button className="btn btn-primary" style={{ width: '100%' }}>{t('btn_start')}</button>
+                        </div>
+
+                        {/* SRT Tool Card */}
+                        <div className="card" onClick={() => push('/srt')} style={{ textAlign: 'center', padding: '30px', transition: '0.3s' }} onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-5px)'} onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}>
+                            <div style={{ width: '100%', height: '160px', overflow: 'hidden', borderRadius: '15px', marginBottom: '20px', border: '1px solid var(--border)' }}>
+                                <img src="https://www.audome.io/audome-uploads/poetry-tool.png" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            </div>
+                            <h3 style={{ marginBottom: '15px', color: 'var(--primary)' }}>{t('tools_srt')}</h3>
+                            <p style={{ marginBottom: '20px', color: 'var(--text-secondary)' }}>{t('tools_srt_desc')}</p>
+                            <div style={{ marginBottom: '20px', fontWeight: 'bold', color: 'var(--primary)' }}>3 {t('credits')}</div>
+                            <button className="btn btn-outline" style={{ width: '100%' }}>{t('btn_start')}</button>
+                        </div>
+
+                        {/* Image Gen Card */}
+                        <div className="card" onClick={() => push('/image-gen')} style={{ textAlign: 'center', padding: '30px', transition: '0.3s' }} onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-5px)'} onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}>
+                            <div style={{ width: '100%', height: '160px', overflow: 'hidden', borderRadius: '15px', marginBottom: '20px', border: '1px solid var(--border)' }}>
+                                <img src="https://raw.githubusercontent.com/banijamrahclub/hlb./db2b446391b0fb1da6f775be88a07b8308d6177d/%D8%B5%D9%88%D8%B1%20%D8%A8%D8%A7%D9%84%D8%B0%D9%83%D8%A7%D8%A1%20%D8%A7%D9%84%D8%A7%D8%B5%D8%B7%D9%86%D8%A7%D8%B9%D9%8A" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            </div>
+                            <h3 style={{ marginBottom: '15px', color: 'var(--primary)' }}>{t('tools_img')}</h3>
+                            <p style={{ marginBottom: '20px', color: 'var(--text-secondary)' }}>{t('tools_img_desc')}</p>
+                            <div style={{ marginBottom: '20px', fontWeight: 'bold', color: 'var(--primary)' }}>4 {t('credits')}</div>
+                            <button className="btn btn-outline" style={{ width: '100%' }}>{t('btn_start')}</button>
                         </div>
                     </div>
                 </div>
@@ -2995,6 +2844,575 @@
             );
         }
 
+        const GEMINI_API_KEY = 'AIzaSyDNqg17wNBPdQr3vOW-VJORPY_0AFhxUW0';
+
+        function AdsPage() {
+            const { user, deductCredits, addHistoryItem, t } = useAuth();
+            const { push } = useRouter();
+            const [status, setStatus] = useState('category'); // category, template, form, processing, result
+            const [data, setData] = useState({
+                type: 'mowalid',
+                eventName: '',
+                speakers: [''],
+                day: '',
+                nightOfText: '',
+                date: '',
+                dateType: 'hijri',
+                time: '',
+                location: '',
+                procession: '',
+                photos: [null],
+                logo: null,
+                userPrompt: '',
+                selectedTemplate: null
+            });
+            const [result, setResult] = useState(null);
+            const [generating, setGenerating] = useState(false);
+            const [aiPrompt, setAiPrompt] = useState('');
+
+            const prototypes = {
+                mowalid: [
+                    'prototypes/مولد/Screenshot 2026-01-27 130331.png', 'prototypes/مولد/Screenshot 2026-01-27 130843.png', 'prototypes/مولد/Screenshot 2026-01-27 130903.png',
+                    'prototypes/مولد/Screenshot 2026-01-27 130938.png', 'prototypes/مولد/Screenshot 2026-01-27 130958.png', 'prototypes/مولد/Screenshot 2026-01-27 131048.png',
+                    'prototypes/مولد/Screenshot 2026-01-27 131139.png', 'prototypes/مولد/Screenshot 2026-01-27 131404.png', 'prototypes/مولد/Screenshot 2026-01-27 131429.png',
+                    'prototypes/مولد/مولد-ابي-الفضل-العباس.png', 'prototypes/مولد/مولد-الباقر1.png', 'prototypes/مولد/مولد-الهادي2.png'
+                ],
+                wafayat: [
+                    'prototypes/وفاة/Screenshot 2026-01-27 130404.png', 'prototypes/وفاة/Screenshot 2026-01-27 130454.png', 'prototypes/وفاة/Screenshot 2026-01-27 130553.png',
+                    'prototypes/وفاة/Screenshot 2026-01-27 130647.png', 'prototypes/وفاة/Screenshot 2026-01-27 130738.png', 'prototypes/وفاة/Screenshot 2026-01-27 130813.png',
+                    'prototypes/وفاة/إعلان-الماتم-وفاة-السيدة-سكينة.png1.png', 'prototypes/وفاة/احمد يتيم.png', 'prototypes/وفاة/استشهاد-الزهراء-الرواية-الثالثة.png',
+                    'prototypes/وفاة/فاينل-استشهاد-الإعسكري.png', 'prototypes/وفاة/وفاة-الهادي-الماتم1.png', 'prototypes/وفاة/وفاة-ام-البنين.png'
+                ],
+                aza: [
+                    'prototypes/عزاء/Screenshot 2026-01-27 124618.png', 'prototypes/عزاء/Screenshot 2026-01-27 124705.png', 'prototypes/عزاء/Screenshot 2026-01-27 125047.png',
+                    'prototypes/عزاء/Screenshot 2026-01-27 125111.png', 'prototypes/عزاء/Screenshot 2026-01-27 125901.png', 'prototypes/عزاء/Screenshot 2026-01-27 125938.png',
+                    'prototypes/عزاء/Screenshot 2026-01-27 130122.png', 'prototypes/عزاء/Screenshot 2026-01-27 130151.png', 'prototypes/عزاء/Screenshot 2026-01-27 130216.png',
+                    'prototypes/عزاء/اعلان استشهاد الكاظم 2.jpg.jpeg', 'prototypes/عزاء/وفاة-السيدة-زينب-مدينة-حمد.png', 'prototypes/عزاء/وفاة-الهادي-مسجد-فاطمة-الزهراء.png', 'prototypes/عزاء/وفاة-ام-البنين1.png'
+                ]
+            };
+
+            const psdTemplates = {
+                mowalid: [
+                    { id: 'm1', name: 'مولد أم البنين', driveId: '13ef4v-CBCsK0EF4fGQJbgtAi_YXAs5UR', keywords: 'pink, flowers, bright, joyous, um_albanin, birth' },
+                    { id: 'm2', name: 'مولد الهادي', driveId: '14OIDKa8Je36_eA4waJqrSSwajclrLxFW', keywords: 'green, light, prophet, hadi, spiritual, bright' },
+                    { id: 'm3', name: 'مولد الباقر', driveId: '1UvPfM9C9MOrouK9oY4zAASBCfAeqC8en', keywords: 'blue, lanterns, calm, birth, baqir' }
+                ],
+                wafayat: [
+                    { id: 'w1', name: 'قالب وفيات', driveId: '1Z3Kss54pquslTBP7VK1FfEDq_6KjgILG', keywords: 'classic, borders, simple, elegant, mourning' },
+                    { id: 'w2', name: 'وفاة الهادي', driveId: '1lSeljAAc4Bc51CzsHpZoag77GjMBhTeO', keywords: 'dark, marble, candles, mourning, hadi, death' },
+                    { id: 'w3', name: 'مأتم', driveId: '1skRKoogGZu-ahRNhQcH4ZKpTP0NTSTyy', keywords: 'black, banners, traditional, mourning, general' }
+                ],
+                aza: [
+                    { id: 'a1', name: 'إعلان طاهر', driveId: '1gAK9k6zf54eAPcKXCp8PrQqrLwfB34aM', keywords: 'red, black, epic, kadhim, shrine, chains' },
+                    { id: 'a2', name: 'إعلان عزاء', driveId: '1zQUKQgv_HPiP7Fon7sswa8aApbQkQxOH', keywords: 'modern, professional, sharp, group, mourning' },
+                    { id: 'a3', name: 'استشهاد السيدة زينب', driveId: '1xi_YOSTt6-rBizlrGAI2yTvNzZ2GIhT7', keywords: 'yellow, sunset, desert, zainab, tragedy' }
+                ]
+            };
+
+            const getDriveDirectUrl = (id) => `https://docs.google.com/uc?export=download&id=${id}`;
+
+            const daysMap = {
+                'الأحد': 'ليلة الإثنين',
+                'الاثنين': 'ليلة الثلاثاء',
+                'الثلاثاء': 'ليلة الأربعاء',
+                'الأربعاء': 'ليلة الخميس',
+                'الخميس': 'ليلة الجمعة',
+                'الجمعة': 'ليلة السبت',
+                'السبت': 'ليلة الأحد'
+            };
+
+            const handleDayChange = (day) => {
+                setData({ ...data, day });
+            };
+
+            const handlePhotoChange = (index, file) => {
+                const newPhotos = [...data.photos];
+                newPhotos[index] = file;
+                setData({ ...data, photos: newPhotos });
+            };
+
+            const handleSpeakerChange = (index, name) => {
+                const newSpeakers = [...data.speakers];
+                newSpeakers[index] = name;
+                setData({ ...data, speakers: newSpeakers });
+            };
+
+            useEffect(() => {
+                if (!user) push('/login');
+            }, [user, push]);
+
+            useEffect(() => {
+                const day = data.day;
+                const timeStr = data.time || '';
+                if (!day) return;
+
+                // Simple heuristic for parsing Arabic time parts
+                const isPM = timeStr.includes('مساءً') || timeStr.includes('ليلاً') || (timeStr.toLowerCase().includes('pm')) || (timeStr.includes('م') && !timeStr.includes('ميلادي'));
+                const hourMatch = timeStr.match(/(\d+)/);
+                const hour = hourMatch ? parseInt(hourMatch[1]) : 0;
+
+                // User Rule: If hour >= 6 PM or explicitly 'Night', it's "Night of" (next day)
+                // Otherwise it's "Day of" (current day)
+                let isNight = isPM && (hour >= 6 && hour < 12);
+                if (timeStr.includes('ليلاً')) isNight = true;
+
+                const newNightText = isNight ? (daysMap[day] || '') : `يوم ${day}`;
+
+                if (newNightText !== data.nightOfText) {
+                    setData(prev => ({ ...prev, nightOfText: newNightText }));
+                }
+            }, [data.day, data.time]);
+
+            const downloadImage = () => {
+                if (!result) return;
+                const link = document.createElement('a');
+                link.href = result;
+                link.download = `MENBAR-AD-${Date.now()}.jpg`;
+                link.click();
+            };
+
+            const addSpeaker = () => {
+                if (data.speakers.length >= 11) return;
+                setData({
+                    ...data,
+                    speakers: [...data.speakers, ''],
+                    photos: [...data.photos, null]
+                });
+            };
+
+            const removeSpeaker = (index) => {
+                if (index === 0) return; // Cannot remove first speaker
+                const newSpeakers = [...data.speakers];
+                const newPhotos = [...data.photos];
+                newSpeakers.splice(index, 1);
+                newPhotos.splice(index, 1);
+                setData({ ...data, speakers: newSpeakers, photos: newPhotos });
+            };
+
+            const generateAd = async () => {
+                const validSpeakers = data.speakers.filter((s, i) => s.trim() !== '' && data.photos[i]);
+                if (!data.eventName || validSpeakers.length === 0 || !data.logo) return alert("يرجى إكمال البيانات المطلوبة (الرادود، المناسبة، الشعار)");
+                if (user.credits < 4) return alert("رصيدك غير كافٍ (تحتاج 4 كريديت)");
+
+                setGenerating(true);
+                setStatus('processing');
+                const setAdsStatus = (msg) => {
+                    const el = document.getElementById('ads-processing-msg');
+                    if (el) el.innerText = msg;
+                };
+
+                const safeRemoveBG = async (blob) => {
+                    try {
+                        if (typeof imglyRemoveBackground === 'function') {
+                            return await imglyRemoveBackground(blob);
+                        } else if (typeof imgly !== 'undefined' && imgly.backgroundRemoval && typeof imgly.backgroundRemoval.removeBackground === 'function') {
+                            return await imgly.backgroundRemoval.removeBackground(blob);
+                        }
+                    } catch (e) { console.error("BG Removal failed:", e); }
+                    return blob;
+                };
+
+                try {
+                    if (window.location.protocol === 'file:') {
+                        throw new Error("لا يمكن معالجة ملفات PSD عند فتح الموقع كملف محلي. يرجى رفعه على خادم أو استخدامه عبر الإنترنت.");
+                    }
+
+                    await deductCredits(4);
+
+                    // --- STEP 1: SMART TEMPLATE SELECTION (SIMPLIFIED) ---
+                    setAdsStatus("جاري اختيار القالب الأنسب للمناسبة...");
+
+                    const currentPool = psdTemplates[data.type] || psdTemplates.aza;
+                    // Simplify: Pick a random template from the pool to reduce AI latency/errors
+                    const tmpl = currentPool[Math.floor(Math.random() * currentPool.length)];
+
+                    setAdsStatus(`تم اختيار قالب "${tmpl.name}".. جاري المعالجة...`);
+
+                    // --- STEP 2: LOAD & PROCESS PSD ---
+                    setAdsStatus("جاري تحميل قالب الفوتوشوب من السحابة (جوجل درايف)...");
+                    const psdUrl = tmpl.driveId ? getDriveDirectUrl(tmpl.driveId) : encodeURI(tmpl.psd);
+                    const response = await fetch(psdUrl);
+
+                    if (!response.ok) {
+                        throw new Error(`تعذر الوصول لملف القالب السحابي. تأكد من إعدادات المشاركة في جوجل درايف.`);
+                    }
+
+                    const arrayBuffer = await response.arrayBuffer();
+
+                    const getAgPsd = () => {
+                        console.log("Detecting agPsd. Globals available:", {
+                            agPsd: !!window.agPsd,
+                            AgPsd: !!window.AgPsd,
+                            agPsdDefault: !!window.agPsdDefault
+                        });
+                        const lib = window.agPsd || window.AgPsd || window.agPsdDefault;
+                        if (!lib) return null;
+                        if (lib.readPsd) return lib;
+                        if (lib.default && lib.default.readPsd) return lib.default;
+                        return null;
+                    };
+
+                    const psdLib = getAgPsd();
+                    if (!psdLib) throw new Error("لم يتم تحميل محرك الـ PSD بشكل صحيح. يرجى مراجعة اتصال الإنترنت.");
+
+                    const psd = psdLib.readPsd(arrayBuffer);
+
+                    const processLayers = async (layers) => {
+                        for (let layer of layers) {
+                            const name = layer.name.toLowerCase();
+
+                            // 1. Text Logic
+                            if (layer.text) {
+                                if (name.includes('اسم') || name.includes('radood') || name.includes('name')) {
+                                    layer.text.text = validSpeakers.join(' & ');
+                                } else if (name.includes('مناسبة') || name.includes('title') || name.includes('event')) {
+                                    layer.text.text = data.eventName;
+                                } else if (name.includes('تاريخ') || name.includes('date')) {
+                                    layer.text.text = data.date;
+                                } else if (name.includes('وقت') || name.includes('time')) {
+                                    layer.text.text = data.time;
+                                } else if (name.includes('يوم') || name.includes('day')) {
+                                    layer.text.text = data.nightOfText || data.day;
+                                } else if (name.includes('موكب') || name.includes('location')) {
+                                    layer.text.text = data.procession || '';
+                                }
+                            }
+
+                            // 2. Portrait Logic
+                            if (name.includes('صورة') || name.includes('photo') || name.includes('image') || name.includes('person')) {
+                                try {
+                                    const cleanBlob = await safeRemoveBG(data.photos[0]);
+                                    const img = new Image();
+                                    img.src = URL.createObjectURL(cleanBlob);
+                                    await new Promise(r => img.onload = r);
+                                    const pCanvas = document.createElement('canvas');
+                                    pCanvas.width = layer.width || img.width;
+                                    pCanvas.height = layer.height || img.height;
+                                    pCanvas.getContext('2d').drawImage(img, 0, 0, pCanvas.width, pCanvas.height);
+                                    layer.canvas = pCanvas;
+                                } catch (e) { }
+                            }
+
+                            // 3. Logo Logic
+                            if (name.includes('شعار') || name.includes('logo')) {
+                                try {
+                                    const img = new Image();
+                                    img.src = URL.createObjectURL(data.logo);
+                                    await new Promise(r => img.onload = r);
+                                    const pCanvas = document.createElement('canvas');
+                                    pCanvas.width = layer.width || 200;
+                                    pCanvas.height = (img.height / img.width) * pCanvas.width;
+                                    pCanvas.getContext('2d').drawImage(img, 0, 0, pCanvas.width, pCanvas.height);
+                                    layer.canvas = pCanvas;
+                                } catch (e) { }
+                            }
+
+                            // 4. BACKGROUND REPLACEMENT (Optional if user wanted fresh BG)
+                            if (name.includes('خلفية') || name.includes('bg') || name.includes('background')) {
+                                if (data.userPrompt) {
+                                    setAdsStatus("تخصيص الخلفية حسب طلبك...");
+                                    const prompt = `Premium religious poster background, ${data.userPrompt}, no text, no people, 8k`;
+                                    const bgUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1080&height=1440&nologo=true`;
+                                    const img = new Image();
+                                    img.crossOrigin = "anonymous";
+                                    img.src = bgUrl;
+                                    await new Promise(r => img.onload = r);
+                                    const pCanvas = document.createElement('canvas');
+                                    pCanvas.width = 1080; pCanvas.height = 1440;
+                                    pCanvas.getContext('2d').drawImage(img, 0, 0, 1080, 1440);
+                                    layer.canvas = pCanvas;
+                                }
+                            }
+
+                            if (layer.children) await processLayers(layer.children);
+                        }
+                    };
+
+                    await processLayers(psd.children);
+
+                    // --- STEP 3: RENDER FINAL ---
+                    setAdsStatus("جاري تجميع الطبقات وتصدير الإعلان...");
+                    const finalCanvas = document.createElement('canvas');
+                    finalCanvas.width = psd.width;
+                    finalCanvas.height = psd.height;
+
+                    const drawLib = getAgPsd();
+                    if (drawLib && drawLib.drawPsd) {
+                        drawLib.drawPsd(finalCanvas, psd);
+                    } else {
+                        throw new Error("فشل محرك الرسم في معالجة الطبقات النهائية.");
+                    }
+
+                    const finalUrl = finalCanvas.toDataURL('image/jpeg', 0.95);
+                    setResult(finalUrl);
+                    setStatus('result');
+                    setGenerating(false);
+                    addHistoryItem({ id: Date.now(), type: 'image', name: `إعلان (PSD): ${data.eventName}`, url: finalUrl, date: new Date().toLocaleDateString('en-GB'), status: 'completed' });
+
+                } catch (e) {
+                    console.error("PSD Engine Error:", e);
+                    alert("عذراً، المحرك لم يتمكن من معالجة هذا القالب:\n" + e.message);
+                    setGenerating(false);
+                    setStatus('form');
+                }
+            };
+
+            if (!user) return null;
+
+
+            return (
+                <div className="container animate-fade-in" style={{ padding: '20px', maxWidth: '1000px' }}>
+                    <div style={{ display: 'flex', gap: '20px', alignItems: 'center', marginBottom: '30px' }}>
+                        <BackButton />
+                        <h2 style={{ margin: 0 }}>🎨 مولد الإعلانات الاحترافي (Banana Pro)</h2>
+                    </div>
+
+                    {status === 'category' && (
+                        <div style={{ textAlign: 'center', padding: '40px 0' }}>
+                            <h2 style={{ marginBottom: '40px' }}>ما هو نوع المناسبة؟</h2>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '25px' }}>
+                                <div className="card" onClick={() => { setData({ ...data, type: 'mowalid' }); setStatus('form'); }} style={{ padding: '40px', cursor: 'pointer', border: '2px solid transparent', transition: '0.3s' }} onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--success)'} onMouseLeave={e => e.currentTarget.style.borderColor = 'transparent'}>
+                                    <div style={{ fontSize: '4rem', marginBottom: '20px' }}>✨</div>
+                                    <h3 style={{ color: 'var(--success)' }}>مولد / أفراح</h3>
+                                    <p style={{ color: 'var(--text-secondary)' }}>ألوان زاهية، ورود، إضاءات مبهجة</p>
+                                </div>
+                                <div className="card" onClick={() => { setData({ ...data, type: 'wafayat' }); setStatus('form'); }} style={{ padding: '40px', cursor: 'pointer', border: '2px solid transparent', transition: '0.3s' }} onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--error)'} onMouseLeave={e => e.currentTarget.style.borderColor = 'transparent'}>
+                                    <div style={{ fontSize: '4rem', marginBottom: '20px' }}>🕯️</div>
+                                    <h3 style={{ color: 'var(--error)' }}>وفاة / أحزان</h3>
+                                    <p style={{ color: 'var(--text-secondary)' }}>أجواء حزينة، شموع، خطوط كلاسيكية</p>
+                                </div>
+                                <div className="card" onClick={() => { setData({ ...data, type: 'aza' }); setStatus('form'); }} style={{ padding: '40px', cursor: 'pointer', border: '2px solid transparent', transition: '0.3s' }} onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--primary)'} onMouseLeave={e => e.currentTarget.style.borderColor = 'transparent'}>
+                                    <div style={{ fontSize: '4rem', marginBottom: '20px' }}>🏴</div>
+                                    <h3 style={{ color: 'var(--primary)' }}>عزاء / مواكب</h3>
+                                    <p style={{ color: 'var(--text-secondary)' }}>تركيز على الرادود، تفاصيل الموكب والوقت</p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {status === 'form' && (
+                        <div className="card animate-fade-in" style={{ padding: '30px' }}>
+                            {/* NEW ORDER: Person and Logo FIRST */}
+
+                            {/* Main Inputs: Person and Logo */}
+                            <div style={{ padding: '20px', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px solid var(--border)', direction: 'rtl', marginBottom: '30px' }}>
+                                <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '15px' }}>📸 بيانات الرادود وشعار الموكب</label>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '20px' }}>
+
+                                    {/* Speaker 1 (Mandatory) */}
+                                    <div className="card" style={{ padding: '15px', background: 'var(--surface)', border: data.photos[0] ? '1px solid var(--primary)' : '2px dashed var(--error)', display: 'flex', flexDirection: 'column' }}>
+                                        <label style={{ fontSize: '0.8rem', display: 'block', marginBottom: '10px', color: data.photos[0] ? 'inherit' : 'var(--error)' }}>
+                                            الرادود/الشيخ الأول (مطلوب):
+                                        </label>
+                                        <div
+                                            onClick={() => document.getElementById('photo-0').click()}
+                                            style={{
+                                                flex: 1, minHeight: '120px', border: '1px dashed var(--border)', borderRadius: '8px',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', overflow: 'hidden', background: 'rgba(255,255,255,0.01)'
+                                            }}
+                                        >
+                                            {data.photos[0] ? <img src={URL.createObjectURL(data.photos[0])} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <div style={{ fontSize: '1.5rem', opacity: 0.5 }}>👤</div>}
+                                        </div>
+                                        <input id="photo-0" type="file" style={{ display: 'none' }} onChange={e => {
+                                            if (e.target.files[0]) handlePhotoChange(0, e.target.files[0]);
+                                        }} />
+                                        <input
+                                            type="text"
+                                            placeholder="اسم الرادود ..."
+                                            className="input-field"
+                                            style={{ marginTop: '10px', fontSize: '0.8rem', marginBottom: 0 }}
+                                            value={data.speakers[0]}
+                                            onChange={e => handleSpeakerChange(0, e.target.value)}
+                                        />
+                                    </div>
+
+                                    {/* Additional Speakers Loop */}
+                                    {data.speakers.map((s, idx) => {
+                                        if (idx === 0) return null; // Already shown Speaker 1
+                                        return (
+                                            <div key={idx} className="card animate-fade-in" style={{ padding: '15px', background: 'var(--surface)', border: data.photos[idx] ? '1px solid var(--primary)' : '1px dashed var(--border)', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+                                                <button
+                                                    onClick={() => removeSpeaker(idx)}
+                                                    style={{ position: 'absolute', top: '5px', left: '5px', background: 'rgba(255,0,0,0.1)', color: 'red', border: 'none', borderRadius: '50%', width: '20px', height: '20px', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 5 }}
+                                                >×</button>
+                                                <label style={{ fontSize: '0.8rem', display: 'block', marginBottom: '10px' }}>مشارك إضافي ({idx + 1}):</label>
+                                                <div
+                                                    onClick={() => document.getElementById(`photo-${idx}`).click()}
+                                                    style={{
+                                                        flex: 1, minHeight: '120px', border: '1px dashed var(--border)', borderRadius: '8px',
+                                                        display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', overflow: 'hidden'
+                                                    }}
+                                                >
+                                                    {data.photos[idx] ? <img src={URL.createObjectURL(data.photos[idx])} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <div style={{ fontSize: '1.5rem', opacity: 0.5 }}>👤</div>}
+                                                </div>
+                                                <input id={`photo-${idx}`} type="file" style={{ display: 'none' }} onChange={e => {
+                                                    if (e.target.files[0]) handlePhotoChange(idx, e.target.files[0]);
+                                                }} />
+                                                <input
+                                                    type="text"
+                                                    placeholder="اسم المشارك..."
+                                                    className="input-field"
+                                                    style={{ marginTop: '10px', fontSize: '0.8rem', marginBottom: 0 }}
+                                                    value={data.speakers[idx]}
+                                                    onChange={e => handleSpeakerChange(idx, e.target.value)}
+                                                />
+                                            </div>
+                                        );
+                                    })}
+
+                                    {/* Add Speaker Button */}
+                                    {data.speakers.length < 11 && (
+                                        <div
+                                            className="card"
+                                            onClick={addSpeaker}
+                                            style={{
+                                                padding: '15px', background: 'rgba(255,255,255,0.01)', border: '1px dashed var(--primary)',
+                                                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                                                cursor: 'pointer', color: 'var(--primary)', minHeight: '180px'
+                                            }}
+                                        >
+                                            <div style={{ fontSize: '2rem', marginBottom: '10px' }}>➕</div>
+                                            <div style={{ fontSize: '0.8rem' }}>إضافة مشارك</div>
+                                            <small style={{ opacity: 0.6 }}>(حتى 10 مشاركين)</small>
+                                        </div>
+                                    )}
+
+                                    {/* Logo Upload (Mandatory but without error border) */}
+                                    <div className="card" style={{ padding: '15px', background: 'var(--surface)', border: '1px dashed var(--border)', display: 'flex', flexDirection: 'column' }}>
+                                        <label style={{ fontSize: '0.8rem', display: 'block', marginBottom: '10px' }}>شعار المأتم (مطلوب):</label>
+                                        <div
+                                            onClick={() => document.getElementById('logo-upload').click()}
+                                            style={{
+                                                flex: 1, minHeight: '120px', border: '1px dashed var(--border)', borderRadius: '8px',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', background: 'rgba(255,255,255,0.02)'
+                                            }}
+                                        >
+                                            {data.logo ? <img src={URL.createObjectURL(data.logo)} style={{ maxHeight: '100px', maxWidth: '100%' }} /> : <div style={{ textAlign: 'center', opacity: 0.6 }}>📂<br />رفع الشعار</div>}
+                                        </div>
+                                        <input id="logo-upload" type="file" style={{ display: 'none' }} onChange={e => {
+                                            if (e.target.files[0]) setData({ ...data, logo: e.target.files[0] });
+                                        }} />
+                                        <input
+                                            type="text"
+                                            placeholder="اسم الموكب/المأتم..."
+                                            className="input-field"
+                                            style={{ marginTop: '10px', fontSize: '0.8rem', marginBottom: 0 }}
+                                            value={data.location}
+                                            onChange={e => setData({ ...data, location: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div style={{ marginTop: '15px', fontSize: '0.75rem', color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.02)', padding: '10px', borderRadius: '8px' }}>
+                                    💡 ملاحظة: الصور الشخصية يتم عزل خلفيتها برمجياً، الشعار يفضل رفعه بصيغة PNG شفافة.
+                                </div>
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '30px', direction: 'rtl' }}>
+                                <div>
+                                    <div className="form-group" style={{ marginBottom: '20px' }}>
+                                        <label style={{ fontWeight: 'bold' }}>اسم المناسبة</label>
+                                        <input type="text" placeholder="مثلاً: استشهاد الزهراء (ع)" className="input-field" value={data.eventName} onChange={e => setData({ ...data, eventName: e.target.value })} />
+                                    </div>
+
+                                    <div className="form-group" style={{ marginBottom: '20px' }}>
+                                        <label style={{ fontWeight: 'bold' }}>يوم المناسبة</label>
+                                        <select className="input-field" value={data.day} onChange={e => handleDayChange(e.target.value)}>
+                                            <option value="">اختر اليوم...</option>
+                                            {Object.keys(daysMap).map(d => <option key={d} value={d}>{d}</option>)}
+                                        </select>
+                                    </div>
+                                    {data.nightOfText && (
+                                        <div style={{ marginBottom: '20px', color: 'var(--primary)', fontWeight: 'bold', fontSize: '0.9rem' }}>
+                                            النتيجة في الإعلان: {data.nightOfText}
+                                        </div>
+                                    )}
+
+                                    {data.type === 'aza' && (
+                                        <div className="form-group" style={{ marginBottom: '20px' }}>
+                                            <label style={{ fontWeight: 'bold' }}>نقطة انطلاق الموكب (اختياري)</label>
+                                            <input type="text" placeholder="مثلاً: من مأتم الخضر" className="input-field" value={data.procession} onChange={e => setData({ ...data, procession: e.target.value })} />
+                                        </div>
+                                    )}
+                                </div>
+                                <div>
+                                    <div className="form-group" style={{ marginBottom: '20px' }}>
+                                        <label style={{ fontWeight: 'bold' }}>نوع التاريخ</label>
+                                        <div style={{ display: 'flex', gap: '10px', marginTop: '5px' }}>
+                                            <button onClick={() => setData({ ...data, dateType: 'hijri' })} className={`btn ${data.dateType === 'hijri' ? 'btn-primary' : 'btn-outline'}`} style={{ flex: 1, padding: '8px', fontSize: '0.8rem' }}>هجري</button>
+                                            <button onClick={() => setData({ ...data, dateType: 'miladi' })} className={`btn ${data.dateType === 'miladi' ? 'btn-primary' : 'btn-outline'}`} style={{ flex: 1, padding: '8px', fontSize: '0.8rem' }}>ميلادي</button>
+                                        </div>
+                                    </div>
+                                    <div className="form-group" style={{ marginBottom: '20px' }}>
+                                        <label style={{ fontWeight: 'bold' }}>التاريخ</label>
+                                        <input type="text" placeholder={data.dateType === 'hijri' ? "مثلاً: 25 رجب 1446هـ" : "مثلاً: 12 يناير 2026م"} className="input-field" value={data.date} onChange={e => setData({ ...data, date: e.target.value })} />
+                                    </div>
+                                    <div className="form-group" style={{ marginBottom: '20px' }}>
+                                        <label style={{ fontWeight: 'bold' }}>الوقت</label>
+                                        <input type="text" placeholder="مثلاً: الساعة 8:00 مساءً" className="input-field" value={data.time} onChange={e => setData({ ...data, time: e.target.value })} />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="form-group" style={{ marginTop: '10px', direction: 'rtl' }}>
+                                <label style={{ fontWeight: 'bold' }}>وصف إضافي أو فكرة للتصميم (اختياري)</label>
+                                <textarea
+                                    placeholder="مثلاً: أريد فكرة المحراب للأمام علي، أو ضريح الإمام الهادي مع أجواء فرح..."
+                                    className="input-field"
+                                    style={{ height: '100px', resize: 'vertical', width: '100%' }}
+                                    value={data.userPrompt}
+                                    onChange={e => setData({ ...data, userPrompt: e.target.value })}
+                                />
+                            </div>
+
+                            <div style={{ marginTop: '30px', display: 'flex', gap: '15px' }}>
+                                <button onClick={generateAd} disabled={generating} className="btn btn-primary" style={{ flex: 1, padding: '18px', fontSize: '1.2rem' }}>
+                                    {generating ? 'جاري التصميم...' : `🚀 تصميم الإعلان باستخدام Banana Pro (4 🪙)`}
+                                </button>
+                                <button onClick={() => setStatus('category')} className="btn btn-outline" style={{ padding: '0 30px' }}>رجوع</button>
+                            </div>
+                        </div >
+                    )
+                    }
+
+                    {
+                        status === 'processing' && (
+                            <div style={{ textAlign: 'center', padding: '80px 0' }}>
+                                <div className="animate-pulse" style={{ fontSize: '8rem', marginBottom: '30px', filter: 'drop-shadow(0 0 20px var(--primary))' }}>🧠</div>
+                                <h2 className="glow-text" style={{ fontSize: '2.5rem', marginBottom: '20px' }}>جاري استحضار قوة العقل السحابي...</h2>
+                                <p id="ads-processing-msg" style={{ color: 'var(--text-secondary)', fontSize: '1.1rem', maxWidth: '600px', margin: '0 auto' }}>
+                                    يقوم العقل الاصطناعي الآن بتركيب طبقات الـ PSD ودمج العناصر كما يفعل المصمم المحترف...
+                                </p>
+                                <div style={{ fontSize: '0.9rem', color: 'var(--primary)', marginTop: '30px', fontWeight: 'bold' }}>
+                                    جاري المعالجة السحابية العميقة للفوتوشوب...
+                                </div>
+                            </div>
+                        )
+                    }
+
+                    {
+                        status === 'result' && (
+                            <div className="card animate-fade-in" style={{ padding: '30px', textAlign: 'center' }}>
+                                <h2 style={{ color: 'var(--success)', marginBottom: '25px' }}>تم إنجاز التصميم!</h2>
+                                <div style={{ maxWidth: '600px', margin: '0 auto 30px', borderRadius: '15px', overflow: 'hidden', border: '2px solid var(--border)', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }}>
+                                    <img src={result} style={{ width: '100%', display: 'block' }} alt="Generated Ad" />
+                                </div>
+                                <div style={{ display: 'flex', gap: '15px', maxWidth: '600px', margin: '0 auto' }}>
+                                    <button onClick={() => downloadImage(result)} className="btn btn-primary" style={{ flex: 1, padding: '15px' }}>⬇️ تحميل الإعلان</button>
+                                    <button onClick={() => setStatus('category')} className="btn btn-outline">تصميم جديد</button>
+                                </div>
+                                <div style={{ marginTop: '20px', fontSize: '0.8rem', color: 'var(--text-secondary)', background: 'rgba(0,0,0,0.2)', padding: '10px', borderRadius: '8px', textAlign: 'left', direction: 'ltr', overflowX: 'auto' }}>
+                                    <strong>AI Orchestration Prompt:</strong><br />
+                                    {aiPrompt}
+                                </div>
+                            </div>
+                        )
+                    }
+                </div >
+            );
+        }
+
+
         function PricingPage() {
             const { addCredits, user, t } = useAuth();
             const { push } = useRouter();
@@ -3092,7 +3510,9 @@
             else if (path === '/dashboard') Component = DashboardPage;
             else if (path === '/image-gen') Component = ImageGenPage;
             else if (path === '/srt') Component = SRTPage;
+            else if (path === '/mix') Component = MixPage;
             else if (path === '/montage') Component = MontagePage;
+            else if (path === '/ads') Component = AdsPage;
             else if (path === '/pricing') Component = PricingPage;
             else if (path === '/profile') Component = ProfilePage;
             else if (path === '/history') Component = HistoryPage;
@@ -3139,10 +3559,10 @@
             } catch (e) {
                 console.error('Critical Render Error:', e);
                 rootElement.innerHTML = `<div style="color:white;padding:20px;text-align:center;">
-                    <h2>عذراً، حدث خطأ أثناء تشغيل الموقع</h2>
-                    <p>${e.message}</p>
-                    <button onclick="location.reload()" class="btn btn-primary">إعادة تحميل</button>
-                </div>`;
+                        <h2>عذراً، حدث خطأ أثناء تشغيل الموقع</h2>
+                        <p>${e.message}</p>
+                        <button onclick="location.reload()" class="btn btn-primary">إعادة تحميل</button>
+                    </div>`;
             }
         }
     </script>
