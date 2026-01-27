@@ -2909,7 +2909,10 @@
                 ]
             };
 
-            const getDriveDirectUrl = (id) => `https://docs.google.com/uc?export=download&id=${id}`;
+            const getDriveDirectUrl = (id) => {
+                const directUrl = `https://docs.google.com/uc?export=download&id=${id}`;
+                return `https://corsproxy.io/?${encodeURIComponent(directUrl)}`;
+            };
 
             const daysMap = {
                 'الأحد': 'ليلة الإثنين',
