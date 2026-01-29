@@ -271,24 +271,34 @@ async def start_image_gen(background_tasks: BackgroundTasks, prompt: str = Form(
 async def get_status(job_id: str):
     return get_task_status(job_id)
 
-@app.get("/proxy-dropbox")
-async def proxy_dropbox(url: str):
-    # Security check: only allow dropbox content
-    if "dropboxusercontent.com" not in url:
-        raise HTTPException(status_code=400, detail="Invalid proxy URL")
-    
+@app.get("/proxy-cloud")
+async def proxy_cloud(url: str):
     try:
-        response = requests.get(url, stream=True, timeout=30)
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept": "*/*",
+            "Referer": "https://www.dropbox.com/"
+        }
+        # Force dl=1 for dropbox
+        if "dropbox.com" in url:
+            url = url.replace("dl=0", "dl=1").replace("www.dropbox.com", "dl.dropboxusercontent.com")
+            
+        session = requests.Session()
+        resp = session.get(url, stream=True, timeout=60, headers=headers)
+        resp.raise_for_status()
+        
         return StreamingResponse(
-            response.iter_content(chunk_size=1024*1024),
-            media_type=response.headers.get("Content-Type", "application/octet-stream")
+            resp.iter_content(chunk_size=1024*1024),
+            media_type=resp.headers.get("Content-Type", "application/octet-stream"),
+            headers={"Access-Control-Allow-Origin": "*"}
         )
     except Exception as e:
+        print(f"Proxy Critical Error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/health")
 def health():
-    return {"status": "alive", "engine": "MENBAR-Pro-v17"}
+    return {"status": "alive", "engine": "MENBAR-Pro-v18-Robust"}
 
 if __name__ == "__main__":
     import uvicorn

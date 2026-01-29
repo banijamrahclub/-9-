@@ -2912,17 +2912,13 @@
 
             const getCloudDirectUrls = (url) => {
                 if (!url) return [];
-                if (url.includes('dropbox.com')) {
-                    const direct = url.replace('www.dropbox.com', 'dl.dropboxusercontent.com').replace('dl=0', 'dl=1');
-                    const encoded = encodeURIComponent(direct);
-                    return [
-                        direct, // Try direct first (some browsers allow it)
-                        `https://api.allorigins.win/raw?url=${encoded}`, // Proxy 1
-                        `https://corsproxy.io/?${encoded}`, // Proxy 2
-                        `${BASE_API_URL}/proxy-dropbox?url=${encoded}` // Your Render Proxy
-                    ];
-                }
-                return [url];
+                const encoded = encodeURIComponent(url);
+                return [
+                    { name: 'رابط مباشر', url: url.replace('www.dropbox.com', 'dl.dropboxusercontent.com').replace('dl=0', 'dl=1') },
+                    { name: 'خادم مِـنـبَـر الاحتياطي', url: `${BASE_API_URL}/proxy-cloud?url=${encoded}` },
+                    { name: 'الوسيط السحابي 1', url: `https://api.allorigins.win/raw?url=${encoded}` },
+                    { name: 'الوسيط السحابي 2', url: `https://corsproxy.io/?${encoded}` }
+                ];
             };
 
             const daysMap = {
@@ -3042,31 +3038,43 @@
 
                     setAdsStatus(`تم اختيار قالب "${tmpl.name}".. جاري المعالجة...`);
 
+                    // --- STEP 0: LIBRARY CHECK ---
+                    if (!window.agPsd && !window.AgPsd) {
+                        throw new Error("عذراً، محرك معالجة الصور (PSD) لم يتم تحميله بعد. يرجى الانتظار ثانية أو إعادة تحميل الصفحة.");
+                    }
+
                     // --- STEP 2: LOAD & PROCESS PSD ---
                     setAdsStatus("جاري الاتصال بالسحابة وسحب القالب...");
-                    const psdUrls = getCloudDirectUrls(tmpl.psd);
+                    const psdItems = getCloudDirectUrls(tmpl.psd);
                     let response = null;
                     let lastError = "";
+                    let successProxy = "";
 
-                    for (const url of psdUrls) {
+                    for (const item of psdItems) {
                         try {
-                            setAdsStatus(`محاولة تحميل القالب عبر ${url.includes('api.allorigins') ? 'الوسيط 1' : url.includes('corsproxy') ? 'الوسيط 2' : 'رابط مباشر'}...`);
+                            setAdsStatus(`محاولة تحميل القالب عبر ${item.name}...`);
                             const controller = new AbortController();
-                            const timeoutId = setTimeout(() => controller.abort(), 25000); // 25s timeout
+                            const timeoutId = setTimeout(() => controller.abort(), 35000);
 
-                            response = await fetch(url, { signal: controller.signal });
+                            response = await fetch(item.url, { signal: controller.signal });
                             clearTimeout(timeoutId);
 
-                            if (response.ok) break;
+                            if (response.ok) {
+                                successProxy = item.name;
+                                break;
+                            } else {
+                                lastError = `HTTP ${response.status}`;
+                            }
                         } catch (e) {
                             lastError = e.message;
-                            console.warn(`Failed to fetch from ${url}:`, e);
                         }
                     }
 
                     if (!response || !response.ok) {
-                        throw new Error(`تعذر تحميل القالب من جميع المصادر السحابية. يرجى التأكد من أن رابط Dropbox لا يزال يعمل (Anyone with link). الخطأ الأخير: ${lastError}`);
+                        throw new Error(`تعذر تحميل القالب من جميع المصادر. (الخطأ: ${lastError}). تأكد من أن الرابط في Dropbox مفعل للعامة.`);
                     }
+
+                    setAdsStatus(`نجح التحميل عبر ${successProxy}! جاري استخراج البيانات...`);
 
                     const arrayBuffer = await response.arrayBuffer();
 
