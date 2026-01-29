@@ -2893,25 +2893,30 @@
 
             const psdTemplates = {
                 mowalid: [
-                    { id: 'm1', name: 'مولد أم البنين', driveId: '13ef4v-CBCsK0EF4fGQJbgtAi_YXAs5UR', keywords: 'pink, flowers, bright, joyous, um_albanin, birth' },
-                    { id: 'm2', name: 'مولد الهادي', driveId: '14OIDKa8Je36_eA4waJqrSSwajclrLxFW', keywords: 'green, light, prophet, hadi, spiritual, bright' },
-                    { id: 'm3', name: 'مولد الباقر', driveId: '1UvPfM9C9MOrouK9oY4zAASBCfAeqC8en', keywords: 'blue, lanterns, calm, birth, baqir' }
+                    { id: 'm1', name: 'مولد أم البنين', psd: 'https://www.dropbox.com/scl/fi/dggamt4jnhv5fygu4zf5n/.psd?rlkey=wx80q4oyoo710qcnio3jnluxb&st=s73z1k07&dl=1', keywords: 'pink, flowers, bright, um_albanin' },
+                    { id: 'm2', name: 'مولد الهادي', psd: 'https://www.dropbox.com/scl/fi/wif0gspdj1km34bgvb0qe/2.psd?rlkey=ofyiucmfcbocjggnjureaabz5&st=y32x2idf&dl=1', keywords: 'green, light, hadi' },
+                    { id: 'm3', name: 'مولد الباقر', psd: 'https://www.dropbox.com/scl/fi/ng9tfrjn6u4iozxkpyrxi/1.psd?rlkey=8dqtskrsqzwyjj18lc2uwtzff&st=83b8csl4&dl=1', keywords: 'blue, lanterns, baqir' }
                 ],
                 wafayat: [
-                    { id: 'w1', name: 'قالب وفيات', driveId: '1Z3Kss54pquslTBP7VK1FfEDq_6KjgILG', keywords: 'classic, borders, simple, elegant, mourning' },
-                    { id: 'w2', name: 'وفاة الهادي', driveId: '1lSeljAAc4Bc51CzsHpZoag77GjMBhTeO', keywords: 'dark, marble, candles, mourning, hadi, death' },
-                    { id: 'w3', name: 'مأتم', driveId: '1skRKoogGZu-ahRNhQcH4ZKpTP0NTSTyy', keywords: 'black, banners, traditional, mourning, general' }
+                    { id: 'w1', name: 'قالب وفيات', psd: 'https://www.dropbox.com/scl/fi/kvnkdnowlbzymr152miz8/.psd?rlkey=5fnxmfcfpsfvbo6n6kf2uz77o&st=3blhhjy9&dl=1', keywords: 'classic, borders, mourning' },
+                    { id: 'w2', name: 'وفاة الهادي', psd: 'https://www.dropbox.com/scl/fi/a7qu69ar5vh6hca0680zj/.psd?rlkey=k9x7yf2qgm1p3hrpu479ltoyy&st=epzimmqr&dl=1', keywords: 'dark, candles, hadi' },
+                    { id: 'w3', name: 'مأتم', psd: 'https://www.dropbox.com/scl/fi/7e02rtvvtm91xbtvk5zse/.psd?rlkey=sly6tagot907peo4uaqvp72l0&st=ihvh9a56&dl=1', keywords: 'black, banners, general' }
                 ],
                 aza: [
-                    { id: 'a1', name: 'إعلان طاهر', driveId: '1gAK9k6zf54eAPcKXCp8PrQqrLwfB34aM', keywords: 'red, black, epic, kadhim, shrine, chains' },
-                    { id: 'a2', name: 'إعلان عزاء', driveId: '1zQUKQgv_HPiP7Fon7sswa8aApbQkQxOH', keywords: 'modern, professional, sharp, group, mourning' },
-                    { id: 'a3', name: 'استشهاد السيدة زينب', driveId: '1xi_YOSTt6-rBizlrGAI2yTvNzZ2GIhT7', keywords: 'yellow, sunset, desert, zainab, tragedy' }
+                    { id: 'a1', name: 'إعلان طاهر', psd: 'https://www.dropbox.com/scl/fi/z5vvj6zxzfzhhfrbzsexc/.psd?rlkey=zg8i9uhwrrqvw6gjqxu213w79&st=t32clasl&dl=1', keywords: 'red, black, epic' },
+                    { id: 'a2', name: 'إعلان عزاء', psd: 'https://www.dropbox.com/scl/fi/67o2z8hs7014vj08frizw/.psd?rlkey=d2qung0jo2dzi8sk0lcctvqwi&st=nlidrlt9&dl=1', keywords: 'modern, group, mourning' },
+                    { id: 'a3', name: 'استشهاد السيدة زينب', psd: 'https://www.dropbox.com/scl/fi/khfkbb71u5qy48x7m0bdr/.psd?rlkey=fic0ge0zqocnpwbewpjzsl8om&st=2tp61vlm&dl=1', keywords: 'yellow, desert, zainab' },
+                    { id: 'a4', name: 'مدينة حمد', psd: 'https://www.dropbox.com/scl/fi/weaqttfxkyuzr8d0i05k1/.psd?rlkey=p2h3l0jkathd8w8dupkhi0qu1&st=2wl8g7uh&dl=1', keywords: 'city, hamad' }
                 ]
             };
 
-            const getDriveDirectUrl = (id) => {
-                const directUrl = `https://docs.google.com/uc?export=download&id=${id}`;
-                return `https://corsproxy.io/?${encodeURIComponent(directUrl)}`;
+            const getCloudDirectUrl = (url) => {
+                if (!url) return '';
+                if (url.includes('dropbox.com')) {
+                    const direct = url.replace('www.dropbox.com', 'dl.dropboxusercontent.com').replace('dl=0', 'dl=1');
+                    return `https://corsproxy.io/?${encodeURIComponent(direct)}`;
+                }
+                return url;
             };
 
             const daysMap = {
@@ -3032,8 +3037,8 @@
                     setAdsStatus(`تم اختيار قالب "${tmpl.name}".. جاري المعالجة...`);
 
                     // --- STEP 2: LOAD & PROCESS PSD ---
-                    setAdsStatus("جاري تحميل قالب الفوتوشوب من السحابة (جوجل درايف)...");
-                    const psdUrl = tmpl.driveId ? getDriveDirectUrl(tmpl.driveId) : encodeURI(tmpl.psd);
+                    setAdsStatus("جاري تحميل قالب الفوتوشوب من السحابة (Dropbox)...");
+                    const psdUrl = getCloudDirectUrl(tmpl.psd);
                     const response = await fetch(psdUrl);
 
                     if (!response.ok) {
