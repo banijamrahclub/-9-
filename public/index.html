@@ -29,31 +29,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
-    <!-- PSD Engine (ag-psd) - Robust Loading -->
-    <script src="https://cdn.jsdelivr.net/npm/ag-psd@2.1.25/dist/bundle.js"
-        onerror="this.src='https://unpkg.com/ag-psd@2.1.25/dist/bundle.js'"></script>
-    <script>
-        (function () {
-            window.loadAgPsd = function () {
-                // Try all known variations of the global export
-                const lib = window.agPsd || window.AgPsd || (window.agPsdDefault && window.agPsdDefault.default);
-                if (lib && (lib.readPsd || (lib.default && lib.default.readPsd))) {
-                    const finalLib = lib.readPsd ? lib : lib.default;
-                    window.agPsd = finalLib;
-                    // Copy properties to window.agPsd for legacy code
-                    for (let key in finalLib) { if (!window.agPsd[key]) window.agPsd[key] = finalLib[key]; }
-                    console.log("✅ ag-psd engine ready");
-                    return true;
-                }
-                return false;
-            };
-            // Initial try
-            window.loadAgPsd();
-            // Retries
-            [500, 1000, 3000, 5000].forEach(ms => setTimeout(window.loadAgPsd, ms));
-            window.addEventListener('load', window.loadAgPsd);
-        })();
-    </script>
+    <!-- PSD Engine will be loaded dynamically when needed -->
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap');
@@ -3039,10 +3015,40 @@
 
                     setAdsStatus(`تم اختيار قالب "${tmpl.name}".. جاري المعالجة...`);
 
-                    // --- STEP 0: LIBRARY CHECK ---
-                    if (window.loadAgPsd) window.loadAgPsd(); // Try once more to initialize
-                    if (!window.agPsd && !window.AgPsd) {
-                        throw new Error("عذراً، محرك معالجة الصور (PSD) لم يتم تحميله بعد. يرجى الانتظار ثانية أو إعادة تحميل الصفحة. تأكد من أن اتصال الإنترنت يسمح بتحميل المكتبات الخارجية.");
+                    // --- STEP 0: FORCE LOAD LIBRARY ---
+                    const forceLoadAgPsd = async () => {
+                        if (window.agPsd && window.agPsd.readPsd) return true;
+
+                        setAdsStatus("جاري تحفيز محرك الصور... (هذا يحدث مرة واحدة)");
+                        const sources = [
+                            'https://cdn.jsdelivr.net/npm/ag-psd@2.1.25/dist/bundle.js',
+                            'https://unpkg.com/ag-psd@2.1.25/dist/bundle.js'
+                        ];
+
+                        for (let src of sources) {
+                            try {
+                                await new Promise((res, rej) => {
+                                    const s = document.createElement('script');
+                                    s.src = src;
+                                    s.onload = res;
+                                    s.onerror = rej;
+                                    document.head.appendChild(s);
+                                });
+
+                                // Reconcile global
+                                const lib = window.agPsd || window.AgPsd || (window.agPsdDefault && window.agPsdDefault.default);
+                                if (lib) {
+                                    window.agPsd = lib.readPsd ? lib : (lib.default || lib);
+                                    if (window.agPsd.readPsd) return true;
+                                }
+                            } catch (e) { console.warn(`Failed to load script from ${src}`); }
+                        }
+                        return false;
+                    };
+
+                    const isLoaded = await forceLoadAgPsd();
+                    if (!isLoaded) {
+                        throw new Error("فشل في تحميل محرك الصور السحابي. يرجى التأكد من أن اتصال الإنترنت لا يحظر ملفات الجافا سكريبت الخارجية.");
                     }
 
                     // --- STEP 2: LOAD & PROCESS PSD ---
