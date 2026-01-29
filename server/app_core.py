@@ -15,6 +15,7 @@ import aiofiles
 import requests
 from fuzzywuzzy import fuzz
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Query, BackgroundTasks
+from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
@@ -269,6 +270,21 @@ async def start_image_gen(background_tasks: BackgroundTasks, prompt: str = Form(
 @app.get("/status/{job_id}")
 async def get_status(job_id: str):
     return get_task_status(job_id)
+
+@app.get("/proxy-dropbox")
+async def proxy_dropbox(url: str):
+    # Security check: only allow dropbox content
+    if "dropboxusercontent.com" not in url:
+        raise HTTPException(status_code=400, detail="Invalid proxy URL")
+    
+    try:
+        response = requests.get(url, stream=True, timeout=30)
+        return StreamingResponse(
+            response.iter_content(chunk_size=1024*1024),
+            media_type=response.headers.get("Content-Type", "application/octet-stream")
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/health")
 def health():

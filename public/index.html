@@ -2914,7 +2914,8 @@
                 if (!url) return '';
                 if (url.includes('dropbox.com')) {
                     const direct = url.replace('www.dropbox.com', 'dl.dropboxusercontent.com').replace('dl=0', 'dl=1');
-                    return `https://corsproxy.io/?${encodeURIComponent(direct)}`;
+                    // Use our Render Backend Proxy (reliable for CORS bypass)
+                    return `${BASE_API_URL}/proxy-dropbox?url=${encodeURIComponent(direct)}`;
                 }
                 return url;
             };
@@ -3042,7 +3043,7 @@
                     const response = await fetch(psdUrl);
 
                     if (!response.ok) {
-                        throw new Error(`تعذر الوصول لملف القالب السحابي. تأكد من إعدادات المشاركة في جوجل درايف.`);
+                        throw new Error(`تعذر الوصول لملف القالب في السحابة. تأكد من أن الرابط في Dropbox مفعل للمشاركة العامة (Anyone with the link).`);
                     }
 
                     const arrayBuffer = await response.arrayBuffer();
