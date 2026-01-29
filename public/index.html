@@ -2910,14 +2910,19 @@
                 ]
             };
 
-            const getCloudDirectUrl = (url) => {
-                if (!url) return '';
+            const getCloudDirectUrls = (url) => {
+                if (!url) return [];
                 if (url.includes('dropbox.com')) {
                     const direct = url.replace('www.dropbox.com', 'dl.dropboxusercontent.com').replace('dl=0', 'dl=1');
-                    // Use our Render Backend Proxy (reliable for CORS bypass)
-                    return `${BASE_API_URL}/proxy-dropbox?url=${encodeURIComponent(direct)}`;
+                    const encoded = encodeURIComponent(direct);
+                    return [
+                        direct, // Try direct first (some browsers allow it)
+                        `https://api.allorigins.win/raw?url=${encoded}`, // Proxy 1
+                        `https://corsproxy.io/?${encoded}`, // Proxy 2
+                        `${BASE_API_URL}/proxy-dropbox?url=${encoded}` // Your Render Proxy
+                    ];
                 }
-                return url;
+                return [url];
             };
 
             const daysMap = {
@@ -3038,12 +3043,29 @@
                     setAdsStatus(`تم اختيار قالب "${tmpl.name}".. جاري المعالجة...`);
 
                     // --- STEP 2: LOAD & PROCESS PSD ---
-                    setAdsStatus("جاري تحميل قالب الفوتوشوب من السحابة (Dropbox)...");
-                    const psdUrl = getCloudDirectUrl(tmpl.psd);
-                    const response = await fetch(psdUrl);
+                    setAdsStatus("جاري الاتصال بالسحابة وسحب القالب...");
+                    const psdUrls = getCloudDirectUrls(tmpl.psd);
+                    let response = null;
+                    let lastError = "";
 
-                    if (!response.ok) {
-                        throw new Error(`تعذر الوصول لملف القالب في السحابة. تأكد من أن الرابط في Dropbox مفعل للمشاركة العامة (Anyone with the link).`);
+                    for (const url of psdUrls) {
+                        try {
+                            setAdsStatus(`محاولة تحميل القالب عبر ${url.includes('api.allorigins') ? 'الوسيط 1' : url.includes('corsproxy') ? 'الوسيط 2' : 'رابط مباشر'}...`);
+                            const controller = new AbortController();
+                            const timeoutId = setTimeout(() => controller.abort(), 25000); // 25s timeout
+
+                            response = await fetch(url, { signal: controller.signal });
+                            clearTimeout(timeoutId);
+
+                            if (response.ok) break;
+                        } catch (e) {
+                            lastError = e.message;
+                            console.warn(`Failed to fetch from ${url}:`, e);
+                        }
+                    }
+
+                    if (!response || !response.ok) {
+                        throw new Error(`تعذر تحميل القالب من جميع المصادر السحابية. يرجى التأكد من أن رابط Dropbox لا يزال يعمل (Anyone with link). الخطأ الأخير: ${lastError}`);
                     }
 
                     const arrayBuffer = await response.arrayBuffer();
