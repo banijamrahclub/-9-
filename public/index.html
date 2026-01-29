@@ -29,28 +29,29 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
-    <!-- PSD Engine (ag-psd) -->
-    <script src="https://unpkg.com/ag-psd@2.1.25/dist/bundle.js"></script>
+    <!-- PSD Engine (ag-psd) - Robust Loading -->
+    <script src="https://cdn.jsdelivr.net/npm/ag-psd@2.1.25/dist/bundle.js"
+        onerror="this.src='https://unpkg.com/ag-psd@2.1.25/dist/bundle.js'"></script>
     <script>
-        // Critical Fix for agPsd loading variations
         (function () {
-            function initialize() {
-                // Version 1: Global agPsd
-                if (window.agPsd && window.agPsd.readPsd) return;
-
-                // Version 2: Default export
-                if (window.agPsd && window.agPsd.default && window.agPsd.default.readPsd) {
-                    const def = window.agPsd.default;
-                    for (let key in def) window.agPsd[key] = def[key];
-                    console.log("agPsd reconciled from .default");
+            window.loadAgPsd = function () {
+                // Try all known variations of the global export
+                const lib = window.agPsd || window.AgPsd || (window.agPsdDefault && window.agPsdDefault.default);
+                if (lib && (lib.readPsd || (lib.default && lib.default.readPsd))) {
+                    const finalLib = lib.readPsd ? lib : lib.default;
+                    window.agPsd = finalLib;
+                    // Copy properties to window.agPsd for legacy code
+                    for (let key in finalLib) { if (!window.agPsd[key]) window.agPsd[key] = finalLib[key]; }
+                    console.log("✅ ag-psd engine ready");
+                    return true;
                 }
-
-                // Version 3: Alternative Global name
-                if (!window.agPsd && window.AgPsd) window.agPsd = window.AgPsd;
-            }
-            initialize();
-            window.addEventListener('load', initialize);
-            setTimeout(initialize, 1000); // Fail-safe after 1 sec
+                return false;
+            };
+            // Initial try
+            window.loadAgPsd();
+            // Retries
+            [500, 1000, 3000, 5000].forEach(ms => setTimeout(window.loadAgPsd, ms));
+            window.addEventListener('load', window.loadAgPsd);
         })();
     </script>
 
@@ -3039,8 +3040,9 @@
                     setAdsStatus(`تم اختيار قالب "${tmpl.name}".. جاري المعالجة...`);
 
                     // --- STEP 0: LIBRARY CHECK ---
+                    if (window.loadAgPsd) window.loadAgPsd(); // Try once more to initialize
                     if (!window.agPsd && !window.AgPsd) {
-                        throw new Error("عذراً، محرك معالجة الصور (PSD) لم يتم تحميله بعد. يرجى الانتظار ثانية أو إعادة تحميل الصفحة.");
+                        throw new Error("عذراً، محرك معالجة الصور (PSD) لم يتم تحميله بعد. يرجى الانتظار ثانية أو إعادة تحميل الصفحة. تأكد من أن اتصال الإنترنت يسمح بتحميل المكتبات الخارجية.");
                     }
 
                     // --- STEP 2: LOAD & PROCESS PSD ---
